@@ -1,0 +1,36 @@
+name: Mirror Upstream PRs
+
+on:
+  schedule:
+    # Runs every hour (adjust cron syntax as needed)
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows you to run it manually anytime
+
+jobs:
+  mirror-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Forked Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use a Personal Access Token (PAT) if you want this sync to trigger subsequent 
+          # GitHub Action workflows (like your code review bot)
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and Sync Upstream PRs
+        run: |
+          # 1. Add the original repository as upstream
+          git remote add upstream https://github.com
+          
+          # 2. Fetch all pull requests from upstream into a local namespace
+          git fetch upstream '+refs/pull/*:refs/remotes/upstream/pull/*'
+          
+          # 3. Push the fetched PR branches to your fork under a custom branch prefix
+          # This converts upstream PR #123 into a branch called 'upstream-pr/123' on your fork
+          git push origin 'refs/remotes/upstream/pull/*/head:refs/heads/upstream-pr/*' --force
